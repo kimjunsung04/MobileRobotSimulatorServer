@@ -49,7 +49,7 @@ public class BaseCode : MonoBehaviour
         switch (casenum)
         {
             case 0:
-                {{CaseCode}}
+{{CaseCode}}
         }
     }
 
@@ -64,33 +64,47 @@ public class BaseCode : MonoBehaviour
 def FormatCode(code: str):
     basetab = "                "
     fcode = ""
-    for item in code.split("\r\n"):
+    for item in code.split("\n"):
         if "w(" in item: # w함수 포매팅
-            fcode += Formatw(basetab, item)
-
+            fcode += f"{Formatw(basetab, item)}\n"
         elif "H(" in item: # H함수 포매팅
-            fcode += f"{FormatH(basetab, item)}\r\n"
+            fcode += f"{FormatH(basetab, item)};\n"
+        elif "wp(" in item: # wp함수 포매팅
+            fcode += f"{Formatwp(basetab, item)};\n"
         else:
-            fcode += f"{basetab}{item}\r\n"
+            fcode += f"{basetab}{item}\n"
+    fcode = fcode.replace("\r", "")
     return fcode
 
 def Formatw(basetab: str, code: str):
-    rccash =  f'{code.split("w")[1].split("),")[0][1:]});' # 무빙부분 추출
+    if "wp(" not in code: # 무빙부분이 wp 라면(w 필터링 충돌방지)
+        rccash =  f'{code.split("w")[1].split("),")[0][1:]});' # 무빙부분 추출
+    else:
+        rccash =  f'wp{code.split("wp")[1].split("),")[0]});' # 무빙부분 추출
 
     if "H(" in rccash: # 무빙부분 포매팅
         rccash = f"{FormatH('', rccash)};"
+    elif "wp(" in rccash:
+        rccash = f"{Formatwp('', rccash)};"
 
-    ifcash = code.split("w")[1].split("),")[1].replace(");", "") # 조건문 추출
+    if "wp(" not in code: # 무빙부분이 wp 라면(w 필터링 충돌방지)
+        ifcash = code.split("w")[1].split("),")[1].replace(");", "") # 조건문 추출
+    else:
+        ifcash = code.split("wp")[1].split("),")[1].replace(");", "") # 조건문 추출
 
     whiniforg = "{ if({{ifcode}}) { robot.f_agl = 0; break; }".replace("{{ifcode}}", ifcash) # 추출결합
-    rcode = f"{basetab}while(true) {whiniforg} {rccash} " + "};\r\n"
+    rcode = f"{basetab}while(true) {whiniforg} {rccash} " + "};\n"
     return rcode
 
 def FormatH(basetab: str, code: str):
-    cashcf = code.split("H")[1].replace("(", "").replace(");", "")
+    cashcf = code.split("H")[1].replace("(", "").replace(");", "") # 인수 추출
     rcode = f'{basetab}{code.split("H")[0]}yield return robot.StartCoroutine(StepHandler("H", {cashcf}))'
     return rcode
 
+def Formatwp(basetab: str, code: str):
+    cashcf = code.split("wp")[1].replace("(", "").replace(");", "") # 인수 추출
+    rcode = f'{basetab}{code.split("wp")[0]}yield return robot.StartCoroutine(StepHandler("wp", {cashcf}))'
+    return rcode
 
 @app.route("/", methods=["POST"])
 async def index(request):
